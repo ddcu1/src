@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "xusb_ch9.h": "c",
+        "xusb_wrapper.h": "c",
+        "xusb_class_storage.h": "c",
+        "xusb_ch9_storage.h": "c"
+    }
+}
