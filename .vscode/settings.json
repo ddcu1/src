@@ -3,6 +3,9 @@
         "xusb_ch9.h": "c",
         "xusb_wrapper.h": "c",
         "xusb_class_storage.h": "c",
-        "xusb_ch9_storage.h": "c"
+        "xusb_ch9_storage.h": "c",
+        "xusb_ch9_ccid.h": "c",
+        "xusb_class_ccid.h": "c",
+        "ccid_config.h": "c"
     }
 }

@@ -1,7 +1,7 @@
 /******************************************************************************
-* Copyright (C) 2017 - 2022 Xilinx, Inc.  All rights reserved.
-* Copyright (c) 2023 Advanced Micro Devices, Inc. All Rights Reserved.
-* SPDX-License-Identifier: MIT
+ * Copyright (C) 2017 - 2022 Xilinx, Inc.  All rights reserved.
+ * Copyright (c) 2023 Advanced Micro Devices, Inc. All Rights Reserved.
+ * SPDX-License-Identifier: MIT
  ******************************************************************************/
 
 /*****************************************************************************/
@@ -28,189 +28,339 @@
 #define XUSB_CLASS_CCID_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 /***************************** Include Files *********************************/
 #include "xil_types.h"
 #include "xusb_ch9.h"
+#include "ccid_config.h"
 
 /************************** Constant Definitions *****************************/
 /*
- * CCID opcodes
+ * Mass storage opcodes.
  */
-#define CCID_OPCODE_GET_CAPABILITIES          0x61
-#define CCID_OPCODE_SLOT_STATUS               0x62
-#define CCID_OPCODE_PARAMETER_EXCHANGE        0x65
-#define CCID_OPCODE_RESET_CARD                0x67
-#define CCID_OPCODE_PROTOCOL_EXCHANGE_T0      0x68
-#define CCID_OPCODE_PROTOCOL_EXCHANGE_T1      0x69
-#define CCID_OPCODE_ESCAPE                    0x6A
-#define CCID_OPCODE_ICC_POWER_ON              0x6B
-#define CCID_OPCODE_ICC_POWER_OFF             0x6C
-#define CCID_OPCODE_GET_SLOT_STATUS           0x6F
+#define USB_RBC_TEST_UNIT_READY 0x00
+#define USB_RBC_REQUEST_SENSE 0x03
+#define USB_RBC_FORMAT 0x04
+#define USB_RBC_INQUIRY 0x12
+#define USB_RBC_MODE_SELECT 0x15
+#define USB_RBC_MODE_SENSE 0x1a
+#define USB_RBC_STARTSTOP_UNIT 0x1b
+#define USB_RBC_MEDIUM_REMOVAL 0x1e
+#define USB_UFI_GET_CAP_LIST 0x23
+#define USB_RBC_READ_CAP 0x25
+#define USB_RBC_READ 0x28
+#define USB_RBC_WRITE 0x2a
+#define USB_RBC_VERIFY 0x2f
+#define USB_SYNC_SCSI 0x35
 
 /* Virtual Flash memory related definitions.
  */
 #ifdef __MICROBLAZE__
 /* 16MB due to limited memory on AXIUSB platform. */
-#define VFLASH_SIZE			0x1000000	/* 16MB space */
+#define VFLASH_SIZE 0x1000000 /* 16MB space */
 #else
-#define VFLASH_SIZE			0x10000000	/* 256MB space */
+#define VFLASH_SIZE 0x10000000 /* 256MB space */
 #endif
-#define VFLASH_BLOCK_SIZE	0x200
-#define VFLASH_NUM_BLOCKS	(VFLASH_SIZE/VFLASH_BLOCK_SIZE)
+#define VFLASH_BLOCK_SIZE 0x200
+#define VFLASH_NUM_BLOCKS (VFLASH_SIZE / VFLASH_BLOCK_SIZE)
 
 /* Class request opcodes.
  */
-#define USB_CLASSREQ_CCID_RESET               0xFF 
+#define USB_CLASSREQ_MASS_STORAGE_RESET 0xFF
+#define USB_CLASSREQ_GET_MAX_LUN 0xFE
 
-/* Smart Card Reader states (May need modification) */
-#define USB_EP_STATE_COMMAND        0
-#define USB_EP_STATE_DATA_IN        1
-#define USB_EP_STATE_DATA_OUT       2
-#define USB_EP_STATE_STATUS         3
+/* SCSI machine states
+ */
+#define USB_EP_STATE_COMMAND 0
+#define USB_EP_STATE_DATA_IN 1
+#define USB_EP_STATE_DATA_OUT 2
+#define USB_EP_STATE_STATUS 3
 
-/**************************** Type Definitions ******************************/
+	/**************************** Type Definitions ******************************/
 
 #ifdef __ICCARM__
 #pragma pack(push, 1)
 #endif
 
-/*
- * The following structures define USB storage class requests. The details of
- * the contents of those structures are not important in the context of this
- * example.
- */
+	// Payload for PC_to_RDR_IccPowerOn
+	typedef struct
+	{
+		u8 bPowerSelect; // 00h: Auto, 01h: 5V, 02h: 3V, 03h: 1.8V
+		u8 abRFU[2];	 // Reserved for future use
+	} PC_to_RDR_IccPowerOnPayload;
 
-typedef struct {
-	u32 dCBWSignature;
-	u32 dCBWTag;
-	u32 dCBWDataTransferLength;
-	u8  bmCBWFlags;
-	u8  cCBWLUN;
-	u8  bCBWCBLength;
-	u8  CBWCB[16];
-} attribute(USB_CBW);
+	// Payload for PC_to_RDR_IccPowerOff, PC_to_RDR_GetSlotStatus, PC_to_RDR_GetParameters, PC_to_RDR_ResetParameters, PC_to_RDR_IccClock
+	typedef struct
+	{
+		u8 abRFU[3]; // Reserved
+	} NoPayload;
 
-typedef struct {
-	u32 dCSWSignature;
-	u32 dCSWTag;
-	u32 dCSWDataResidue;
-	u8  bCSWStatus;
-} attribute(USB_CSW);
+	// Payload for PC_to_RDR_Mechanical
+	typedef struct
+	{
+		u8 abRFU[2];
+	} NoPayload1;
 
-typedef	struct {
-	u8 deviceType;
-	u8 rmb;
-	u8 version;
-	u8 blah;
-	u8 additionalLength;
-	u8 sccs;
-	u8 info0;
-	u8 info1;
-	u8 vendorID[8];
-	u8 productID[16];
-	u8 revision[4];
-} attribute(SCSI_INQUIRY);
+	// Payload for PC_to_RDR_XfrBlock
+	typedef struct
+	{
+		u8 bBWI;
+		u16 wLevelParameter;
+		u8 abData[MAX_DATA_SIZE]; // Replace MAX_DATA_SIZE with the appropriate size
+	} PC_to_RDR_XfrBlockPayload;
 
-typedef struct {
-	u8  reserved[3];
-	u8  listLength;
-	u32 numBlocks;
-	u8  descCode;
-	u8  blockLengthMSB;
-	u16 blockLength;
-} attribute(SCSI_CAP_LIST);
+	// Payload for PC_to_RDR_T0APDU
+	typedef struct
+	{
+		u8 bmChanges;
+		u8 bClassGetResponse;
+		u8 bClassEnvelope;
+	} PC_to_RDR_T0APDU_Payload;
 
-typedef struct {
-	u32 numBlocks;
-	u32 blockSize;
-} attribute(SCSI_READ_CAPACITY);
+	// payload varies based on the protocol
+	typedef struct
+	{
+		u8 bmFindexDindex;
+		u8 bmTCCKST0;
+		u8 bGuardTimeT0;
+		u8 bWaitingIntegerT0;
+		u8 bClockStop;
+	} ProtocolDataStructureT0;
 
-typedef struct {
-	u8  opCode;
-	u8  reserved1;
-	u32 block;
-	u8  reserved2;
-	u16 length;
-	u8  control;
-} attribute(SCSI_READ_WRITE);
+	typedef struct
+	{
+		u8 bmFindexDindex;
+		u8 bmTCCKST1;
+		u8 bGuardTimeT1;
+		u8 bmWaitingIntegersT1;
+		u8 bClockStop;
+		u8 bIFSC;
+		u8 bNadValue;
+	} ProtocolDataStructureT1;
 
-typedef struct {
-	u8  opCode;
-	u8  immed;
-	u8  reserved1;
-	u8  reserved2;
-	u8  start;
-	u8  control;
-} attribute(SCSI_START_STOP);
+	// Payload for PC_to_RDR_Escape
+	typedef struct
+	{
+		u8 abData[MAX_ESCAPE_DATA_SIZE];
+	} PC_to_RDR_EscapePayload;
 
+	typedef struct
+	{
+		u8 bTimeOut;
+		u8 bmFormatString;
+		u8 bmPINBlockString;
+		u8 bmPINLengthFormat;
+		u16 wPINMaxExtraDigit;
+		u8 bEntryValidationCondition;
+		u8 bNumberMessage;
+		u16 wLangID;
+		u8 bMsgIndex;
+		u8 bTeoPrologue[3]; // For T=1
+							// abPINApduByte would be a dynamically sized array,
+							// handle its allocation separately
+	} PINVerificationDataStructure;
 
-// CCID 
+	typedef struct
+	{
+		// ... similar fields as PINVerificationDataStructure ...
+		u8 bInsertionOffsetOld;
+		u8 bInsertionOffsetNew;
+		u8 bConfirmPIN;
+		// ... other fields ...
+	} PINModificationDataStructure;
 
-// Get Capabilities
-typedef struct {
-    u8  bMessageType;  // Rbm slot/sequence
-    u32 dwLength;      // Length of data to follow
-    u8  bSlot;         // Slot number
-    u8  bSequence;     // Sequence number
-} attribute(CCID_GET_CAPABILITIES);
+	typedef struct
+	{
+		u8 bPINOperation;
+		union
+		{
+			PINVerificationDataStructure verifyData;
+			PINModificationDataStructure modifyData;
+			// Add other operation-specific structs as needed
+		} operationData;
+	} PC_to_RDR_SecurePayload;
 
-// Parameter Exchange
-typedef struct {
-    u8  bMessageType; 
-    u32 dwLength;      
-    u8  bSlot;        
-    u8  bSequence;    
-    u8  bLevel;       // Exchange level
-    u8  dwParams[4];  // Parameters (content depends on exchange level)
-} attribute(CCID_PARAMETER_EXCHANGE);
+	// Payload for PC_to_RDR_SetDataRateAndClockFrequency
+	typedef struct
+	{
+		u32 dwClockFrequency;
+		u32 dwDataRate;
+	} PC_to_RDR_SetDataRateAndClockFrequencyPayload;
 
-// ICC Power On
-typedef struct {
-    u8  bMessageType;   
-    u32 dwLength;       
-    u8  bSlot;           
-    u8  bSequence;      
-    u8  bPowerSelect;   // Power select (voltage selection)
-    u8  abRFU[2];       // Reserved for future use
-} attribute(CCID_ICC_POWER_ON);
+	// Message payload for CCID bulk out message
+	typedef union
+	{
+		PC_to_RDR_IccPowerOnPayload powerOnPayload;
+		NoPayload noPayload;
+		NoPayload1 noPayload1;
+		PC_to_RDR_XfrBlockPayload xfrBlockPayload;
+		ProtocolDataStructureT0 protocolDataStructureT0;
+		ProtocolDataStructureT1 protocolDataStructureT1;
+		PC_to_RDR_T0APDU_Payload t0APDUPayload;
+		PC_to_RDR_EscapePayload escapePayload;
+		PINVerificationDataStructure pinVerifyData;
+		PINModificationDataStructure pinModifyData;
+		PC_to_RDR_SecurePayload securePayload;
+		PC_to_RDR_SetDataRateAndClockFrequencyPayload setDataRateAndClockFrequencyPayload;
+	} CCID_MessagePayload;
 
-// Protocol Exchange (Example - T=0 Protocol)
-typedef struct {
-    u8  bMessageType;  
-    u32 dwLength;     
-    u8  bSlot;        
-    u8  bSequence;    
-    u8  bBWI;         // Block wait time integer 
-    u16 wLevelParameter;  // Level parameter
-    /*  ... (APDU data would follow) */
-} attribute(CCID_PROTOCOL_EXCHANGE_T0); 
+	typedef struct
+	{
+		u8 bMessageType;			 // Identifies the command type
+		u8 bSlot;					 // Slot number
+		u8 bSeq;					 // Sequence number
+		u32 dwLength;				 // Message-specific data length
+		CCID_MessagePayload payload; // Payload (variable length, interpretation depends on bMessageType)
+	} CCID_BulkOutMessage;
 
-// Protocol Exchange (Example - T=1 Protocol)
-typedef struct {
-	u8  bMessageType;  
-	u32 dwLength;     
-	u8  bSlot;        
-	u8  bSequence;    
-	u8  bBWI;         // Block wait time integer 
-	u8  bLevelParameter;  // Level parameter
-	/*  ... (APDU data would follow) */
-} attribute(CCID_PROTOCOL_EXCHANGE_T1);
+	typedef struct
+	{
+		u8 lastBulkOutCommand;
+		u8 lastBulkOutSeqNum;
+		bool isFailingBulkOut;
+	} SlotState;
 
+	// Response data for RDR_to_PC_DataBlock
+	typedef struct
+	{
+		u8 abData[]; // Flexible array member for dynamic size
+	} RDR_to_PC_DataBlock;
+
+	// Response data for RDR_to_PC_SlotStatus
+	typedef struct
+	{
+		u8 bClockStatus; // Clock status (00h: running, 01h: stopped low, etc.)
+	} RDR_to_PC_SlotStatus;
+
+	typedef struct
+	{
+		u8 bProtocolNum;
+		union
+		{
+			ProtocolDataStructureT0 protocolDataT0;
+			ProtocolDataStructureT1 protocolDataT1;
+		} protocolData;
+	} RDR_to_PC_Parameters;
+
+	typedef struct
+	{
+		u8 abData[MAX_ESCAPE_DATA_SIZE]; // Replace MAX_ESCAPE_DATA_SIZE
+	} RDR_to_PC_Escape;
+
+	typedef struct
+	{
+		u32 dwClockFrequency;
+		u32 dwDataRate;
+	} RDR_to_PC_DataRateAndClockFrequency;
+
+	typedef struct
+	{
+		u8 bMessageType;
+		u32 dwLength;
+		u8 bSlot;
+		u8 bSeq;
+		u8 bStatus;
+		u8 bError;
+		u8 bChainParameter;
+		union
+		{
+			RDR_to_PC_DataBlock dataBlock;	 // For basic data block responses
+			RDR_to_PC_SlotStatus slotStatus; // For slot status responses
+			RDR_to_PC_Parameters parameters; // For parameter responses
+			RDR_to_PC_Escape escapeData;	 // For escape responses
+			RDR_to_PC_DataRateAndClockFrequency dataRateAndClockFrequency;
+		} responseData;
+	} BulkInMessage;
+
+	/*
+	 * The following structures define USB storage class requests. The details of
+	 * the contents of those structures are not important in the context of this
+	 * example.
+	 */
+	typedef struct
+	{
+		u32 dCBWSignature;
+		u32 dCBWTag;
+		u32 dCBWDataTransferLength;
+		u8 bmCBWFlags;
+		u8 cCBWLUN;
+		u8 bCBWCBLength;
+		u8 CBWCB[16];
+	} attribute(USB_CBW);
+
+	typedef struct
+	{
+		u32 dCSWSignature;
+		u32 dCSWTag;
+		u32 dCSWDataResidue;
+		u8 bCSWStatus;
+	} attribute(USB_CSW);
+
+	typedef struct
+	{
+		u8 deviceType;
+		u8 rmb;
+		u8 version;
+		u8 blah;
+		u8 additionalLength;
+		u8 sccs;
+		u8 info0;
+		u8 info1;
+		u8 vendorID[8];
+		u8 productID[16];
+		u8 revision[4];
+	} attribute(SCSI_INQUIRY);
+
+	typedef struct
+	{
+		u8 reserved[3];
+		u8 listLength;
+		u32 numBlocks;
+		u8 descCode;
+		u8 blockLengthMSB;
+		u16 blockLength;
+	} attribute(SCSI_CAP_LIST);
+
+	typedef struct
+	{
+		u32 numBlocks;
+		u32 blockSize;
+	} attribute(SCSI_READ_CAPACITY);
+
+	typedef struct
+	{
+		u8 opCode;
+		u8 reserved1;
+		u32 block;
+		u8 reserved2;
+		u16 length;
+		u8 control;
+	} attribute(SCSI_READ_WRITE);
+
+	typedef struct
+	{
+		u8 opCode;
+		u8 immed;
+		u8 reserved1;
+		u8 reserved2;
+		u8 start;
+		u8 control;
+	} attribute(SCSI_START_STOP);
 
 #ifdef __ICCARM__
 #pragma pack(pop)
 #endif
 
-/************************** Function Prototypes ******************************/
-void ClassReq(struct Usb_DevData *InstancePtr, SetupPacket *SetupData);
-void ParseCBW(struct Usb_DevData *InstancePtr);
-void SendCSW(struct Usb_DevData *InstancePtr, u32 Length);
+	/************************** Function Prototypes ******************************/
+	void ClassReq(struct Usb_DevData *InstancePtr, SetupPacket *SetupData);
+	void ParseCBW(struct Usb_DevData *InstancePtr);
+	void SendCSW(struct Usb_DevData *InstancePtr, u32 Length);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* XUSB_CLASS_STORAGE_H */
+#endif /* XUSB_CLASS_CCID_H */

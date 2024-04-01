@@ -12,6 +12,7 @@
 #define CCID_SUPPORTS_TPDU_T1
 // Escape Command Settings
 #define MAX_ESCAPE_DATA_SIZE 256 // Example value, adjust as needed
+#define MAX_DATA_BLOCK_SIZE 256 // Example value, adjust as needed
 
 //#define CCID_SUPPORTS_SHORT_APDU
 //#define CCID_SUPPORTS_EXTENDED_APDU

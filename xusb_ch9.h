@@ -274,6 +274,7 @@ typedef struct {
 #define USB_CLASS_AUDIO			0x01
 #define USB_CLASS_HID			0x03
 #define USB_CLASS_STORAGE		0x08
+#define USB_CLASS_CCID			0x0B
 #define USB_CLASS_MISC			0xEF
 #define USB_CLASS_DFU			0xFE
 #define USB_CLASS_VENDOR		0xFF

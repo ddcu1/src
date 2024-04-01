@@ -137,7 +137,7 @@ typedef struct {
 
 // Payload for PC_to_RDR_Escape
 typedef struct {
-    u8 abData[MAX_ESCAPE_DATA_SIZE];
+    u8 abData[];
 } PC_to_RDR_EscapePayload;
 
 typedef struct {

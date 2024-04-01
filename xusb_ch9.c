@@ -67,7 +67,6 @@ void Ch9Handler(struct Usb_DevData *InstancePtr,
 #ifdef CH9_DEBUG
 	printf("Handle setup packet\n");
 #endif
-
 	switch (SetupData->bRequestType & USB_REQ_TYPE_MASK) {
 		case USB_CMD_STDREQ:
 			Usb_StdDevReq(InstancePtr, SetupData);
